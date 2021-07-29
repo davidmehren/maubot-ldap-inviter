@@ -23,6 +23,7 @@ sync_rooms:
     # Hardcoded members for this room
     members:
       - mxid: '@some.user:matrix.server.tld'
+        power_level: 0
 # Users that are allowed to run a sync
 admin_users:
   - '@some.admin:matrix.server.tld'
