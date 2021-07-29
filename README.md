@@ -3,7 +3,7 @@
 ## Roadmap
 - [x] Implement `ldap-sync` command, that invites hardcoded users to hardcoded aliases
 - [x] Create rooms behind aliases, if they don't exist
-- [ ] Only allow a list of admin users to run sync
+- [x] Only allow a list of admin users to run sync
 - [ ] Support templating in room names `ldap-sync <1> <2> ...`
 - [ ] Get list of users from LDAP
 

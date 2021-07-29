@@ -1,9 +1,10 @@
+import asyncio
 from typing import Type, Optional, TypedDict
 
 from maubot.handlers import command
 from mautrix.client.api.events import EventMethods
 from mautrix.client.api.rooms import RoomMethods
-from mautrix.errors import MNotFound
+from mautrix.errors import MNotFound, MatrixError
 from mautrix.types import UserID, RoomID, StateEvent, Membership, RoomNameStateEventContent, \
     PowerLevelStateEventContent, RoomDirectoryVisibility
 from mautrix.types.event.type import EventType
@@ -20,6 +21,7 @@ class UserConfig(TypedDict):
 class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         helper.copy("sync_rooms")
+        helper.copy("admin_users")
 
 
 class LDAPInviterBot(Plugin):
@@ -123,5 +125,13 @@ class LDAPInviterBot(Plugin):
 
     @command.new(name='ldap-sync')
     async def ldap_sync(self, evt: MessageEvent) -> None:
+        if evt.sender not in self.config['admin_users']:
+            await evt.respond('You are not allowed to run a sync.')
+            return None
         await evt.respond('Starting sync...')
-        await self.sync_rooms(evt, self.config["sync_rooms"])
+        try:
+            await self.sync_rooms(evt, self.config["sync_rooms"])
+        except MatrixError as e:
+            # Wait a bit to hopefully clear too many requests
+            await asyncio.sleep(5)
+            await evt.respond(f'Encountered fatal error: {e}')

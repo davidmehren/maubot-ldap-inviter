@@ -8,4 +8,7 @@ sync_rooms:
       - ldap_group: 'cn=admins-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
         power_level: 100
     members:
-      - mxid: '@some.user:matrix.server.tld
+      - mxid: '@some.user:matrix.server.tld'
+# Users that are allowed to run a sync
+admin_users:
+  - '@some.admin:matrix.server.tld'
