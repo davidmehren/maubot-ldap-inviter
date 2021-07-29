@@ -1,4 +1,5 @@
 import asyncio
+from pprint import pformat
 from typing import Type, Optional, TypedDict, Mapping, List
 
 from ldap.ldapobject import SimpleLDAPObject
@@ -166,14 +167,22 @@ class LDAPInviterBot(Plugin):
     async def get_matrix_users_of_ldap_group(self, evt: MessageEvent, con: SimpleLDAPObject,
                                              ldap_group: str, power_level: int) -> UserInfoMap:
         import ldap
-        await evt.respond(f'Getting users for LDAP group {ldap_group}...')
+        await evt.respond(f'Getting users for LDAP group `{ldap_group}`')
         ldap_filter = f"(&{self.config['ldap']['user_filter']}(memberOf={ldap_group}))"
         group_members = con.search_s(self.config['ldap']['base_dn'], ldap.SCOPE_SUBTREE, ldap_filter, ['uid'])
-        mxids = map(lambda member: member[1]['uid'][0].decode("utf-8"), group_members)
+        mxids = map(lambda member: f'@{member[1]["uid"][0].decode("utf-8")}:{self.config["ldap"]["mxid_homeserver"]}', group_members)
         user_map = {}
         for mxid in mxids:
             user_map[mxid] = UserConfig(power_level=power_level)
         return user_map
+
+    async def get_all_matrix_users_of_sync_room(self, evt: MessageEvent, con: SimpleLDAPObject,
+                                                sync_room: SyncRoomConfig) -> UserInfoMap:
+        user_info_map = {}
+        for ldap_config in sync_room['ldap_members']:
+            user_info_map.update(
+                await self.get_matrix_users_of_ldap_group(evt, con, ldap_config['ldap_group'], ldap_config['power_level']))
+        return user_info_map
 
     @command.new(name='ldap-sync')
     @command.argument("arg1", "Argument 1", pass_raw=True, required=False)
@@ -201,13 +210,11 @@ class LDAPInviterBot(Plugin):
             # Create LDAP connection
             con = ldap.initialize(self.config['ldap']['uri'])
             con.simple_bind_s(self.config['ldap']['connect_dn'], self.config['ldap']['connect_password'])
-            await evt.respond(f'Successfully connected. I am: {con.whoami_s()}')
+            await evt.respond(f'Successfully connected. I am `{con.whoami_s()}`')
             room: SyncRoomConfig
             for room in self.config['sync_rooms']:
-                for ldap_group in room['ldap_members']:
-                    uids = await self.get_matrix_users_of_ldap_group(evt, con, ldap_group['ldap_group'],
-                                                                     ldap_group['power_level'])
-                    await evt.respond(f'Members of group {ldap_group}: {uids}')
+                uids = await self.get_all_matrix_users_of_sync_room(evt, con, room)
+                await evt.respond(f'Members of room `{room["alias"]}`:\n```\n{pformat(uids)}\n```')
             con.unbind_s()
         except Exception as e:
             await evt.respond(f'Encountered fatal error: {e}')

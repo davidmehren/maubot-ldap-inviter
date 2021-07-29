@@ -5,6 +5,7 @@ ldap:
   connect_dn: ''
   connect_password: ''
   user_filter:  '(objectClass=inetOrgPerson)'
+  mxid_homeserver: 'matrix.server.tld' # Homeserver used to generate MXIDs from LDAP uids
 # Rooms that should be synced
 sync_rooms:
   - alias: '#alias-<1>:matrix.server.tld' # Aliases can include '<1>' placeholders
