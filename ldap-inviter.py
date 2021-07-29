@@ -104,8 +104,15 @@ class LDAPInviterBot(Plugin):
                                                  PowerLevelStateEventContent(users=current_power_levels))
         await evt.respond(f'Successfully ensured power levels')
 
-    async def sync_room(self, evt: MessageEvent, room):
+    @staticmethod
+    def template_room_alias(alias: str, arg1: str) -> str:
+        if "<1>" in alias and arg1 == "":
+            raise Exception(f'Room alias "{alias}" includes a placeholder, but no argument was provided')
+        return alias.replace('<1>', arg1)
+
+    async def sync_room(self, evt: MessageEvent, room, arg1: str):
         alias = room['alias']
+        alias = self.template_room_alias(alias, arg1)
         await evt.respond(f'Syncing room: {alias}')
         # Ensure room exists
         room_id = await self.ensure_room_with_alias(evt, alias)
@@ -119,19 +126,20 @@ class LDAPInviterBot(Plugin):
         await self.ensure_room_visibility(evt, room_id, room['visibility'])
         await evt.respond(f'Successfully synced room.')
 
-    async def sync_rooms(self, evt, rooms):
+    async def sync_rooms(self, evt, rooms, arg1: str):
         for room in rooms:
-            await self.sync_room(evt, room)
+            await self.sync_room(evt, room, arg1)
 
     @command.new(name='ldap-sync')
-    async def ldap_sync(self, evt: MessageEvent) -> None:
+    @command.argument("arg1", "Argument 1", pass_raw=True, required=False)
+    async def ldap_sync(self, evt: MessageEvent, arg1: str) -> None:
         if evt.sender not in self.config['admin_users']:
             await evt.respond('You are not allowed to run a sync.')
             return None
-        await evt.respond('Starting sync...')
+        await evt.respond(f'Starting sync. Arg1: "{arg1}"')
         try:
-            await self.sync_rooms(evt, self.config["sync_rooms"])
-        except MatrixError as e:
+            await self.sync_rooms(evt, self.config["sync_rooms"], arg1)
+        except Exception as e:
             # Wait a bit to hopefully clear too many requests
             await asyncio.sleep(5)
             await evt.respond(f'Encountered fatal error: {e}')

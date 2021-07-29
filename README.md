@@ -4,7 +4,8 @@
 - [x] Implement `ldap-sync` command, that invites hardcoded users to hardcoded aliases
 - [x] Create rooms behind aliases, if they don't exist
 - [x] Only allow a list of admin users to run sync
-- [ ] Support templating in room names `ldap-sync <1> <2> ...`
+- [x] Support templating in room names `ldap-sync <1> <2> ...`
+  - Only implemented with one argument
 - [ ] Get list of users from LDAP
 
 ## Note
