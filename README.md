@@ -7,6 +7,11 @@
 - [ ] Support templating in room names `ldap-sync <1> <2> ...`
 - [ ] Get list of users from LDAP
 
+## Note
+The bot will quickly run into rate limits.
+You can use the Synapse Admin API to remove rate limits for the bot user.
+See https://matrix-org.github.io/synapse/latest/admin_api/user_admin_api.html#override-ratelimiting-for-users
+for more details.
 
 ## Config
 ```yaml
