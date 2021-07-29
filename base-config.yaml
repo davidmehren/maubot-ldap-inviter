@@ -1,0 +1,11 @@
+sync_rooms:
+  - alias: '#testalias3:matrix.server.tld'
+    visibility: 'private'
+    name: 'Foo <1>'
+    ldap_members:
+      - ldap_group: 'cn=users-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
+        power_level: 0
+      - ldap_group: 'cn=admins-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
+        power_level: 100
+    members:
+      - mxid: '@some.user:matrix.server.tld
