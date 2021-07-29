@@ -1,10 +1,13 @@
 # LDAP config (TBD)
 ldap:
   uri: 'ldap://foo.bar.tls:389'
+  base_dn: ''
+  connect_dn: ''
+  connect_password: ''
+  user_filter:  '(objectClass=inetOrgPerson)'
 # Rooms that should be synced
 sync_rooms:
-    # Aliases can include '<1>' placeholders
-  - alias: '#alias-<1>:matrix.server.tld'
+  - alias: '#alias-<1>:matrix.server.tld' # Aliases can include '<1>' placeholders
     # Should the room be visible in the room list?
     # Can be 'private' or 'public'
     visibility: 'private'
@@ -12,9 +15,9 @@ sync_rooms:
     name: 'Foo <1>'
     # LDAP members for this room
     ldap_members:
-        # Groups can include '<1>' placeholders
       - ldap_group: 'cn=users-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
         power_level: 0
+        # Groups can include '<1>' placeholders
       - ldap_group: 'cn=admins-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
         power_level: 100
     # Hardcoded members for this room

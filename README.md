@@ -8,7 +8,13 @@
   - Only implemented with one argument
 - [ ] Get list of users from LDAP
 
-## Note
+## Notes
+### Dependencies
+This Bot requires the `python-ldap` library.
+It must be installed manually in the python environment used by your Maubot instance.
+If you run Maubot via the official Docker image, run `apk add py3-pyldap` in the container.
+
+### Rate Limiting
 The bot will quickly run into rate limits.
 You can use the Synapse Admin API to remove rate limits for the bot user.
 See https://matrix-org.github.io/synapse/latest/admin_api/user_admin_api.html#override-ratelimiting-for-users

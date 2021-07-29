@@ -1,10 +1,11 @@
 import asyncio
 from typing import Type, Optional, TypedDict
 
+from ldap.ldapobject import SimpleLDAPObject
 from maubot.handlers import command
 from mautrix.client.api.events import EventMethods
 from mautrix.client.api.rooms import RoomMethods
-from mautrix.errors import MNotFound, MatrixError
+from mautrix.errors import MNotFound
 from mautrix.types import UserID, RoomID, StateEvent, Membership, RoomNameStateEventContent, \
     PowerLevelStateEventContent, RoomDirectoryVisibility
 from mautrix.types.event.type import EventType
@@ -22,6 +23,7 @@ class Config(BaseProxyConfig):
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         helper.copy("sync_rooms")
         helper.copy("admin_users")
+        helper.copy("ldap")
 
 
 class LDAPInviterBot(Plugin):
@@ -130,6 +132,13 @@ class LDAPInviterBot(Plugin):
         for room in rooms:
             await self.sync_room(evt, room, arg1)
 
+    async def get_matrix_users_of_ldap_group(self, evt: MessageEvent, con: SimpleLDAPObject, ldap_group: str) -> [str]:
+        import ldap
+        await evt.respond(f'Getting users for LDAP group {ldap_group}...')
+        ldap_filter = f"(&{self.config['ldap']['user_filter']}(memberOf={ldap_group}))"
+        group_members = con.search_s(self.config['ldap']['base_dn'], ldap.SCOPE_SUBTREE, ldap_filter, ['uid'])
+        return list(map(lambda member: member[1]['uid'][0].decode("utf-8"), group_members))
+
     @command.new(name='ldap-sync')
     @command.argument("arg1", "Argument 1", pass_raw=True, required=False)
     async def ldap_sync(self, evt: MessageEvent, arg1: str) -> None:
@@ -143,3 +152,21 @@ class LDAPInviterBot(Plugin):
             # Wait a bit to hopefully clear too many requests
             await asyncio.sleep(5)
             await evt.respond(f'Encountered fatal error: {e}')
+
+    @command.new(name='ldap-check')
+    async def ldap_check(self, evt: MessageEvent):
+        await evt.respond("Checking LDAP connection...")
+        try:
+            import ldap
+            # Create LDAP connection
+            con = ldap.initialize(self.config['ldap']['uri'])
+            con.simple_bind_s(self.config['ldap']['connect_dn'], self.config['ldap']['connect_password'])
+            await evt.respond(f'Successfully connected. I am: {con.whoami_s()}')
+            for room in self.config['sync_rooms']:
+                for ldap_group in room['ldap_members']:
+                    uids = await self.get_matrix_users_of_ldap_group(evt, con, ldap_group['ldap_group'])
+                    await evt.respond(f'Members of group {ldap_group}: {uids}')
+            con.unbind_s()
+        except Exception as e:
+            await evt.respond(f'Encountered fatal error: {e}')
+            raise e

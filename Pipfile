@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 maubot = "*"
 mautrix = "*"
+python-ldap = "*"
 
 [dev-packages]
 
