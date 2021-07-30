@@ -1,12 +1,18 @@
 # LDAP Inviter Bot
 
-## Roadmap
-- [x] Implement `ldap-sync` command, that invites hardcoded users to hardcoded aliases
-- [x] Create rooms behind aliases, if they don't exist
-- [x] Only allow a list of admin users to run sync
-- [x] Support templating in room names `ldap-sync <1> <2> ...`
-  - Only implemented with one argument
-- [ ] Get list of users from LDAP
+This is a [maubot](https://github.com/maubot/maubot) plugin that invites users to Matrix rooms
+according to their membership in LDAP groups.
+It was built in an educational context, where groups of students work on software projects.
+The bot ensures that participating students are invited to all rooms
+(general chat, announcement-only, helpdesk & their group chat) and that tutors have correct power levels in the corresponding rooms.
+
+**Features:**
+- Ensure that a room with the configured alias exists and has the correct name
+- Invite users from LDAP and from the config and give them the configured power levels
+- Set the room visibility
+- Room aliases, room names and LDAP DNs are templateable.
+- Matrix IDs of LDAP users are generated using the `uid` attribute from LDAP and a configurable homeserver.
+- The bot does not remove or uninvite users from rooms. This is intentional, to allow students to join with their own Matrix accounts.
 
 ## Notes
 ### Dependencies
@@ -22,13 +28,18 @@ for more details.
 
 ## Config
 ```yaml
-# LDAP config (TBD)
+# LDAP config
 ldap:
-  uri: 'ldap://foo.bar.tls:389'
+  uri: 'ldap://foo.bar.tld:389' # URI of your LDAP server
+  base_dn: 'cn=users,dc=foo,dc=bar,dc=tld' # base-DN of your user objects
+  connect_dn: 'uid=ldap-bot,cn=users,dc=foo,dc=bar,dc=tld' # DN of the user used to bind
+  connect_password: 'verySecure' # password of the user used to bind
+  user_filter:  '(objectClass=inetOrgPerson)'
+  mxid_homeserver: 'matrix.server.tld' # Homeserver used to generate MXIDs from LDAP uids
+  
 # Rooms that should be synced
 sync_rooms:
-    # Aliases can include '<1>' placeholders
-  - alias: '#alias-<1>:matrix.server.tld'
+  - alias: '#event-<1>-group-1:matrix.server.tld' # Aliases can include '<1>' placeholders
     # Should the room be visible in the room list?
     # Can be 'private' or 'public'
     visibility: 'private'
@@ -36,15 +47,23 @@ sync_rooms:
     name: 'Foo <1>'
     # LDAP members for this room
     ldap_members:
-        # Groups can include '<1>' placeholders
-      - ldap_group: 'cn=users-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
+      - ldap_group: 'cn=event-<1>-group1,cn=groups,dc=foo,dc=bar,dc=tld'
         power_level: 0
-      - ldap_group: 'cn=admins-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
+        # Groups can include '<1>' placeholders
+      - ldap_group: 'cn=event-<1>-tutors1,cn=groups,dc=foo,dc=bar,dc=tld'
         power_level: 100
     # Hardcoded members for this room
     members:
-      - mxid: '@some.user:matrix.server.tld'
+      - mxid: '@super.admin:matrix.server.tld'
+        power_level: 100
+        
 # Users that are allowed to run a sync
 admin_users:
-  - '@some.admin:matrix.server.tld'
+  - '@super.admin:matrix.server.tld'
 ```
+
+## Usage
+To check the connection to your LDAP server, write `!ldap-check` in a room with the bot.
+It will print out the computed members for all configured rooms.
+
+To run the actual invite process, write `!ldap-sync` in a room with the bot.

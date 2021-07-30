@@ -1,14 +1,15 @@
-# LDAP config (TBD)
+# LDAP config
 ldap:
-  uri: 'ldap://foo.bar.tls:389'
-  base_dn: ''
-  connect_dn: ''
-  connect_password: ''
+  uri: 'ldap://foo.bar.tld:389' # URI of your LDAP server
+  base_dn: 'cn=users,dc=foo,dc=bar,dc=tld' # base-DN of your user objects
+  connect_dn: 'uid=ldap-bot,cn=users,dc=foo,dc=bar,dc=tld' # DN of the user used to bind
+  connect_password: 'verySecure' # password of the user used to bind
   user_filter:  '(objectClass=inetOrgPerson)'
   mxid_homeserver: 'matrix.server.tld' # Homeserver used to generate MXIDs from LDAP uids
+
 # Rooms that should be synced
 sync_rooms:
-  - alias: '#alias-<1>:matrix.server.tld' # Aliases can include '<1>' placeholders
+  - alias: '#event-<1>-group-1:matrix.server.tld' # Aliases can include '<1>' placeholders
     # Should the room be visible in the room list?
     # Can be 'private' or 'public'
     visibility: 'private'
@@ -16,15 +17,16 @@ sync_rooms:
     name: 'Foo <1>'
     # LDAP members for this room
     ldap_members:
-      - ldap_group: 'cn=users-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
+      - ldap_group: 'cn=event-<1>-group1,cn=groups,dc=foo,dc=bar,dc=tld'
         power_level: 0
         # Groups can include '<1>' placeholders
-      - ldap_group: 'cn=admins-<1>,cn=groups,dc=foo,dc=bar,dc=tld'
+      - ldap_group: 'cn=event-<1>-tutors1,cn=groups,dc=foo,dc=bar,dc=tld'
         power_level: 100
     # Hardcoded members for this room
     members:
-      - mxid: '@some.user:matrix.server.tld'
-        power_level: 0
+      - mxid: '@super.admin:matrix.server.tld'
+        power_level: 100
+
 # Users that are allowed to run a sync
 admin_users:
-  - '@some.admin:matrix.server.tld'
+  - '@super.admin:matrix.server.tld'
