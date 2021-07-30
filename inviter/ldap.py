@@ -5,6 +5,7 @@ from mautrix.util.logging import TraceLogger
 
 from .config import LDAPMemberConfig
 from .matrix_utils import UserInfoMap, UserInfo
+from .utils import process_template
 
 
 class LDAPManager:
@@ -58,14 +59,13 @@ class LDAPManager:
         return user_map
 
     async def get_all_matrix_users_of_sync_room(
-        self,
-        ldap_members: List[LDAPMemberConfig],
+        self, ldap_members: List[LDAPMemberConfig], template_arg: str
     ) -> UserInfoMap:
         user_info_map = {}
         for member_config in ldap_members:
             user_info_map.update(
                 await self.get_matrix_users_of_ldap_group(
-                    member_config["ldap_group"],
+                    process_template(member_config["ldap_group"], template_arg),
                     member_config["power_level"],
                 )
             )
