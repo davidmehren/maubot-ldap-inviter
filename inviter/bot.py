@@ -119,6 +119,7 @@ class LDAPInviterBot(Plugin):
                 self.config["ldap"]["base_dn"],
                 self.config["ldap"]["user_filter"],
                 self.config["ldap"]["mxid_homeserver"],
+                self.log,
             )
             await evt.respond(
                 f"Successfully connected. I am `{ldap_manager.connection.whoami_s()}`"

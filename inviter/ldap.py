@@ -2,6 +2,7 @@ from typing import List
 
 import ldap
 from maubot import MessageEvent
+from mautrix.util.logging import TraceLogger
 
 from .config import LDAPMemberConfig
 from .matrix_utils import UserInfoMap, UserInfo
@@ -21,7 +22,9 @@ class LDAPManager:
         base_dn: str,
         user_filter: str,
         default_homeserver: str,
+        logger: TraceLogger,
     ):
+        self.logger = logger
         # Create LDAP connection
         self.connection = ldap.initialize(server_uri)
         self.connection.simple_bind_s(
@@ -34,11 +37,10 @@ class LDAPManager:
 
     async def get_matrix_users_of_ldap_group(
         self,
-        evt: MessageEvent,
         ldap_group: str,
         power_level: int,
     ) -> UserInfoMap:
-        await evt.respond(f"Getting users for LDAP group `{ldap_group}`")
+        self.logger.debug(f"Getting users for LDAP group `{ldap_group}`")
         # Piece together LDAP filter from config and memberOf statement
         ldap_filter = f"(&{self.user_filter}(memberOf={ldap_group}))"
         # Search for group members in LDAP
@@ -58,14 +60,12 @@ class LDAPManager:
 
     async def get_all_matrix_users_of_sync_room(
         self,
-        evt: MessageEvent,
         ldap_members: List[LDAPMemberConfig],
     ) -> UserInfoMap:
         user_info_map = {}
         for member_config in ldap_members:
             user_info_map.update(
                 await self.get_matrix_users_of_ldap_group(
-                    evt,
                     member_config["ldap_group"],
                     member_config["power_level"],
                 )
