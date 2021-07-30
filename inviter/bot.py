@@ -12,7 +12,7 @@ from mautrix.util.config import BaseProxyConfig
 from .config import SyncRoomConfig, LDAPInviterConfig
 from .ldap import LDAPManager
 from .matrix_utils import MatrixUtils
-from .utils import template_room_alias, to_user_info_map
+from .utils import process_template, to_user_info_map
 
 
 class LDAPInviterBot(Plugin):
@@ -48,7 +48,7 @@ class LDAPInviterBot(Plugin):
         )
 
         # Generate the final room alias
-        alias = template_room_alias(room["alias"], template_arg1)
+        alias = process_template(room["alias"], template_arg1)
         await evt.respond(f"Syncing room: {alias}")
         self.log.debug(f"Syncing room: {alias}")
 
@@ -56,7 +56,9 @@ class LDAPInviterBot(Plugin):
         room_id = await self.matrix_utils.ensure_room_with_alias(alias)
 
         # Ensure room has the correct name
-        await self.matrix_utils.ensure_room_name(room_id, room["name"])
+        await self.matrix_utils.ensure_room_name(
+            room_id, process_template(room["name"], template_arg1)
+        )
 
         # Generate map of users
         all_users = {}
@@ -93,7 +95,7 @@ class LDAPInviterBot(Plugin):
             await evt.respond("You are not allowed to run a sync.")
             return None
 
-        await evt.respond(f'Starting sync.')
+        await evt.respond(f"Starting sync.")
         try:
             await self.sync_rooms(evt, self.config["sync_rooms"], arg1)
         except Exception as e:
