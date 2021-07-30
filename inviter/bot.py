@@ -8,9 +8,10 @@ from mautrix.client.api.events import EventMethods
 from mautrix.client.api.rooms import RoomMethods
 from mautrix.util.config import BaseProxyConfig
 
-from .config import MemberConfig, SyncRoomConfig, LDAPInviterConfig
-from .ldap import get_all_matrix_users_of_sync_room
-from .matrix_utils import MatrixUtils, UserInfoMap, UserConfig
+from .config import SyncRoomConfig, LDAPInviterConfig
+from .ldap import LDAPManager
+from .matrix_utils import MatrixUtils
+from .utils import template_room_alias, to_user_info_map
 
 
 class LDAPInviterBot(Plugin):
@@ -30,27 +31,11 @@ class LDAPInviterBot(Plugin):
     def get_config_class(cls) -> Type[BaseProxyConfig]:
         return LDAPInviterConfig
 
-    @staticmethod
-    def template_room_alias(alias: str, arg1: str) -> str:
-        if "<1>" in alias and arg1 == "":
-            raise Exception(
-                f'Room alias "{alias}" includes a placeholder, but no argument was provided'
-            )
-        return alias.replace("<1>", arg1)
-
-    @staticmethod
-    def to_user_info_map(member_config: [MemberConfig]) -> UserInfoMap:
-        user_info_map = {}
-        user: dict
-        for user in member_config:
-            user_info_map[user["mxid"]] = UserConfig(
-                power_level=user.get("power_level", 0)
-            )
-        return user_info_map
-
-    async def sync_room(self, evt: MessageEvent, room, arg1: str):
-        alias = room["alias"]
-        alias = self.template_room_alias(alias, arg1)
+    async def sync_room(
+        self, evt: MessageEvent, room: SyncRoomConfig, template_arg1: str
+    ):
+        """Sync a single Matrix room"""
+        alias = template_room_alias(room["alias"], template_arg1)
         await evt.respond(f"Syncing room: {alias}")
         # Ensure room exists
         room_id = await self.matrix_utils.ensure_room_with_alias(evt, alias)
@@ -58,19 +43,22 @@ class LDAPInviterBot(Plugin):
         await self.matrix_utils.ensure_room_name(evt, room_id, room["name"])
         # Ensure hardcoded users are invited
         await self.matrix_utils.ensure_room_invitees(
-            evt, room_id, self.to_user_info_map(room["members"])
+            evt, room_id, to_user_info_map(room["members"])
         )
         # Ensure users have correct power levels
         await self.matrix_utils.ensure_room_power_levels(
-            evt, room_id, self.to_user_info_map(room["members"])
+            evt, room_id, to_user_info_map(room["members"])
         )
         # Ensure room is (in) visible in Room Directory
         await self.matrix_utils.ensure_room_visibility(evt, room_id, room["visibility"])
         await evt.respond(f"Successfully synced room.")
 
-    async def sync_rooms(self, evt, rooms, arg1: str):
+    async def sync_rooms(
+        self, evt: MessageEvent, rooms: [SyncRoomConfig], template_arg1: str
+    ):
+        """Loops through a list of rooms to sync them"""
         for room in rooms:
-            await self.sync_room(evt, room, arg1)
+            await self.sync_room(evt, room, template_arg1)
 
     @command.new(name="ldap-sync")
     @command.argument("arg1", "Argument 1", pass_raw=True, required=False)
@@ -89,31 +77,29 @@ class LDAPInviterBot(Plugin):
     @command.new(name="debug-map")
     async def ldap_check(self, evt: MessageEvent):
         await evt.respond(
-            f'User map: {self.to_user_info_map(self.config["sync_rooms"][0]["members"])}'
+            f'User map: {to_user_info_map(self.config["sync_rooms"][0]["members"])}'
         )
 
     @command.new(name="ldap-check")
     async def ldap_check(self, evt: MessageEvent):
         await evt.respond("Checking LDAP connection...")
         try:
-            import ldap
-
-            # Create LDAP connection
-            con = ldap.initialize(self.config["ldap"]["uri"])
-            con.simple_bind_s(
+            ldap_manager = LDAPManager(
+                self.config["ldap"]["uri"],
                 self.config["ldap"]["connect_dn"],
                 self.config["ldap"]["connect_password"],
             )
-            await evt.respond(f"Successfully connected. I am `{con.whoami_s()}`")
+            await evt.respond(
+                f"Successfully connected. I am `{ldap_manager.connection.whoami_s()}`"
+            )
             room: SyncRoomConfig
             for room in self.config["sync_rooms"]:
-                uids = await get_all_matrix_users_of_sync_room(
-                    self.config, evt, con, room
+                uids = await ldap_manager.get_all_matrix_users_of_sync_room(
+                    self.config, evt, room
                 )
                 await evt.respond(
                     f'Members of room `{room["alias"]}`:\n```\n{pformat(uids)}\n```'
                 )
-            con.unbind_s()
         except Exception as e:
             await evt.respond(f"Encountered fatal error: {e}")
             raise e
