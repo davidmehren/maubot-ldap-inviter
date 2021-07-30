@@ -1,37 +1,56 @@
+from typing import List
+
 import ldap
 from maubot import MessageEvent
 
-from .config import SyncRoomConfig, LDAPInviterConfig
+from .config import LDAPMemberConfig
 from .matrix_utils import UserInfoMap, UserConfig
 
 
 class LDAPManager:
     connection = None
+    base_dn = None
+    user_filter = None
+    mxid_default_homeserver = None
 
-    def __init__(self, server_uri: str, user_dn: str, user_pass: str):
+    def __init__(
+        self,
+        server_uri: str,
+        user_dn: str,
+        user_pass: str,
+        base_dn: str,
+        user_filter: str,
+        default_homeserver: str,
+    ):
         # Create LDAP connection
         self.connection = ldap.initialize(server_uri)
         self.connection.simple_bind_s(
             user_dn,
             user_pass,
         )
+        self.base_dn = base_dn
+        self.user_filter = user_filter
+        self.mxid_default_homeserver = default_homeserver
 
     async def get_matrix_users_of_ldap_group(
         self,
-        config: LDAPInviterConfig,
         evt: MessageEvent,
         ldap_group: str,
         power_level: int,
     ) -> UserInfoMap:
         await evt.respond(f"Getting users for LDAP group `{ldap_group}`")
-        ldap_filter = f"(&{config['ldap']['user_filter']}(memberOf={ldap_group}))"
+        # Piece together LDAP filter from config and memberOf statement
+        ldap_filter = f"(&{self.user_filter}(memberOf={ldap_group}))"
+        # Search for group members in LDAP
         group_members = self.connection.search_s(
-            config["ldap"]["base_dn"], ldap.SCOPE_SUBTREE, ldap_filter, ["uid"]
+            self.base_dn, ldap.SCOPE_SUBTREE, ldap_filter, ["uid"]
         )
+        # UTF-8-decode uids and create MXIDs
         mxids = map(
-            lambda member: f'@{member[1]["uid"][0].decode("utf-8")}:{config["ldap"]["mxid_homeserver"]}',
+            lambda member: f'@{member[1]["uid"][0].decode("utf-8")}:{self.mxid_default_homeserver}',
             group_members,
         )
+        # Build UserInfoMap from MXIDs and power level
         user_map = {}
         for mxid in mxids:
             user_map[mxid] = UserConfig(power_level=power_level)
@@ -39,18 +58,16 @@ class LDAPManager:
 
     async def get_all_matrix_users_of_sync_room(
         self,
-        config: LDAPInviterConfig,
         evt: MessageEvent,
-        sync_room: SyncRoomConfig,
+        ldap_members: List[LDAPMemberConfig],
     ) -> UserInfoMap:
         user_info_map = {}
-        for ldap_config in sync_room["ldap_members"]:
+        for member_config in ldap_members:
             user_info_map.update(
                 await self.get_matrix_users_of_ldap_group(
-                    config,
                     evt,
-                    ldap_config["ldap_group"],
-                    ldap_config["power_level"],
+                    member_config["ldap_group"],
+                    member_config["power_level"],
                 )
             )
         return user_info_map

@@ -91,6 +91,9 @@ class LDAPInviterBot(Plugin):
                 self.config["ldap"]["uri"],
                 self.config["ldap"]["connect_dn"],
                 self.config["ldap"]["connect_password"],
+                self.config["ldap"]["base_dn"],
+                self.config["ldap"]["user_filter"],
+                self.config["ldap"]["mxid_homeserver"],
             )
             await evt.respond(
                 f"Successfully connected. I am `{ldap_manager.connection.whoami_s()}`"
@@ -98,7 +101,7 @@ class LDAPInviterBot(Plugin):
             room: SyncRoomConfig
             for room in self.config["sync_rooms"]:
                 uids = await ldap_manager.get_all_matrix_users_of_sync_room(
-                    self.config, evt, room
+                    evt, room["ldap_members"]
                 )
                 await evt.respond(
                     f'Members of room `{room["alias"]}`:\n```\n{pformat(uids)}\n```'
