@@ -25,7 +25,7 @@ class LDAPInviterBot(Plugin):
         self.config.load_and_update()
         self.room_methods = RoomMethods(api=self.client.api)
         self.event_methods = EventMethods(api=self.client.api)
-        self.matrix_utils = MatrixUtils(self.client.api)
+        self.matrix_utils = MatrixUtils(self.client.api, self.log)
 
     @classmethod
     def get_config_class(cls) -> Type[BaseProxyConfig]:
@@ -39,19 +39,19 @@ class LDAPInviterBot(Plugin):
         alias = template_room_alias(room["alias"], template_arg1)
         await evt.respond(f"Syncing room: {alias}")
         # Ensure room exists
-        room_id = await self.matrix_utils.ensure_room_with_alias(evt, alias)
+        room_id = await self.matrix_utils.ensure_room_with_alias(alias)
         # Ensure room has the correct name
-        await self.matrix_utils.ensure_room_name(evt, room_id, room["name"])
+        await self.matrix_utils.ensure_room_name(room_id, room["name"])
         # Ensure hardcoded users are invited
         await self.matrix_utils.ensure_room_invitees(
-            evt, room_id, to_user_info_map(room["members"])
+            room_id, to_user_info_map(room["members"])
         )
         # Ensure users have correct power levels
         await self.matrix_utils.ensure_room_power_levels(
-            evt, room_id, to_user_info_map(room["members"])
+            room_id, to_user_info_map(room["members"])
         )
         # Ensure room is (in) visible in Room Directory
-        await self.matrix_utils.ensure_room_visibility(evt, room_id, room["visibility"])
+        await self.matrix_utils.ensure_room_visibility(room_id, room["visibility"])
         await evt.respond(f"Successfully synced room.")
 
     async def sync_rooms(
