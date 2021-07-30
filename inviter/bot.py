@@ -1,43 +1,16 @@
 import asyncio
 from pprint import pformat
-from typing import Type, Optional, TypedDict, List
+from typing import Type
 
-from ldap.ldapobject import SimpleLDAPObject
+from maubot import Plugin, MessageEvent
 from maubot.handlers import command
 from mautrix.client.api.events import EventMethods
 from mautrix.client.api.rooms import RoomMethods
-from mautrix.util.config import BaseProxyConfig, ConfigUpdateHelper
+from mautrix.util.config import BaseProxyConfig
 
+from .config import MemberConfig, SyncRoomConfig, LDAPInviterConfig
+from .ldap import get_all_matrix_users_of_sync_room
 from .matrix_utils import MatrixUtils, UserInfoMap, UserConfig
-from maubot import Plugin, MessageEvent
-
-
-class LDAPMemberConfig(TypedDict):
-    ldap_group: str
-    power_level: Optional[int]
-
-
-class MemberConfig(TypedDict):
-    mxid: str
-    power_level: Optional[int]
-
-
-class SyncRoomConfig(TypedDict):
-    alias: str
-    visibility: str
-    name: str
-    ldap_members: List[LDAPMemberConfig]
-    members: List[MemberConfig]
-
-
-class LDAPInviterConfig(BaseProxyConfig):
-    sync_rooms: List[SyncRoomConfig]
-    admin_users: List[str]
-
-    def do_update(self, helper: ConfigUpdateHelper) -> None:
-        helper.copy("sync_rooms")
-        helper.copy("admin_users")
-        helper.copy("ldap")
 
 
 class LDAPInviterBot(Plugin):
@@ -91,28 +64,6 @@ class LDAPInviterBot(Plugin):
         for room in rooms:
             await self.sync_room(evt, room, arg1)
 
-    async def get_matrix_users_of_ldap_group(self, evt: MessageEvent, con: SimpleLDAPObject,
-                                             ldap_group: str, power_level: int) -> UserInfoMap:
-        import ldap
-        await evt.respond(f'Getting users for LDAP group `{ldap_group}`')
-        ldap_filter = f"(&{self.config['ldap']['user_filter']}(memberOf={ldap_group}))"
-        group_members = con.search_s(self.config['ldap']['base_dn'], ldap.SCOPE_SUBTREE, ldap_filter, ['uid'])
-        mxids = map(lambda member: f'@{member[1]["uid"][0].decode("utf-8")}:{self.config["ldap"]["mxid_homeserver"]}',
-                    group_members)
-        user_map = {}
-        for mxid in mxids:
-            user_map[mxid] = UserConfig(power_level=power_level)
-        return user_map
-
-    async def get_all_matrix_users_of_sync_room(self, evt: MessageEvent, con: SimpleLDAPObject,
-                                                sync_room: SyncRoomConfig) -> UserInfoMap:
-        user_info_map = {}
-        for ldap_config in sync_room['ldap_members']:
-            user_info_map.update(
-                await self.get_matrix_users_of_ldap_group(evt, con, ldap_config['ldap_group'],
-                                                          ldap_config['power_level']))
-        return user_info_map
-
     @command.new(name='ldap-sync')
     @command.argument("arg1", "Argument 1", pass_raw=True, required=False)
     async def ldap_sync(self, evt: MessageEvent, arg1: str) -> None:
@@ -142,7 +93,7 @@ class LDAPInviterBot(Plugin):
             await evt.respond(f'Successfully connected. I am `{con.whoami_s()}`')
             room: SyncRoomConfig
             for room in self.config['sync_rooms']:
-                uids = await self.get_all_matrix_users_of_sync_room(evt, con, room)
+                uids = await get_all_matrix_users_of_sync_room(self.config, evt, con, room)
                 await evt.respond(f'Members of room `{room["alias"]}`:\n```\n{pformat(uids)}\n```')
             con.unbind_s()
         except Exception as e:

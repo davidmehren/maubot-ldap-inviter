@@ -9,6 +9,7 @@ mautrix = "*"
 python-ldap = "*"
 
 [dev-packages]
+black = "21.7b0"
 
 [requires]
 python_version = "3.9"
