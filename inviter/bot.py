@@ -36,24 +36,45 @@ class LDAPInviterBot(Plugin):
         self, evt: MessageEvent, room: SyncRoomConfig, template_arg1: str
     ):
         """Sync a single Matrix room"""
+        # Setup LDAP connection
+        ldap_manager = LDAPManager(
+            self.config["ldap"]["uri"],
+            self.config["ldap"]["connect_dn"],
+            self.config["ldap"]["connect_password"],
+            self.config["ldap"]["base_dn"],
+            self.config["ldap"]["user_filter"],
+            self.config["ldap"]["mxid_homeserver"],
+            self.log,
+        )
+
         # Generate the final room alias
         alias = template_room_alias(room["alias"], template_arg1)
         await evt.respond(f"Syncing room: {alias}")
         self.log.debug(f"Syncing room: {alias}")
+
         # Ensure room exists
         room_id = await self.matrix_utils.ensure_room_with_alias(alias)
+
         # Ensure room has the correct name
         await self.matrix_utils.ensure_room_name(room_id, room["name"])
-        # Ensure hardcoded users are invited
-        await self.matrix_utils.ensure_room_invitees(
-            room_id, to_user_info_map(room["members"])
+
+        # Generate map of users
+        all_users = {}
+        all_users.update(
+            await ldap_manager.get_all_matrix_users_of_sync_room(room["ldap_members"])
         )
+        # Hardcoded users are added last to allow overriding LDAP
+        all_users.update(to_user_info_map(room.get("members", [])))
+
+        # Ensure users are invited
+        await self.matrix_utils.ensure_room_invitees(room_id, all_users)
+
         # Ensure users have correct power levels
-        await self.matrix_utils.ensure_room_power_levels(
-            room_id, to_user_info_map(room["members"])
-        )
+        await self.matrix_utils.ensure_room_power_levels(room_id, all_users)
+
         # Ensure room is (in) visible in Room Directory
         await self.matrix_utils.ensure_room_visibility(room_id, room["visibility"])
+
         await evt.respond(f"Successfully synced room.")
         self.log.debug(f"Successfully synced room.")
 
