@@ -21,9 +21,19 @@ class SyncRoomConfig(TypedDict):
     members: List[MemberConfig]
 
 
+class LDAPConfig(TypedDict):
+    uri: str
+    base_dn: str
+    connect_dn: str
+    connect_password: str
+    user_filter: str
+    mxid_homeserver: str
+
+
 class LDAPInviterConfig(BaseProxyConfig):
     sync_rooms: List[SyncRoomConfig]
     admin_users: List[str]
+    ldap: LDAPConfig
 
     def do_update(self, helper: ConfigUpdateHelper) -> None:
         helper.copy("sync_rooms")

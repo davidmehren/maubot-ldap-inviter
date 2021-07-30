@@ -1,9 +1,7 @@
 import ldap
-from ldap.ldapobject import SimpleLDAPObject
-
 from maubot import MessageEvent
 
-from .config import SyncRoomConfig
+from .config import SyncRoomConfig, LDAPInviterConfig
 from .matrix_utils import UserInfoMap, UserConfig
 
 
@@ -20,7 +18,7 @@ class LDAPManager:
 
     async def get_matrix_users_of_ldap_group(
         self,
-        config,
+        config: LDAPInviterConfig,
         evt: MessageEvent,
         ldap_group: str,
         power_level: int,
@@ -41,7 +39,7 @@ class LDAPManager:
 
     async def get_all_matrix_users_of_sync_room(
         self,
-        config,
+        config: LDAPInviterConfig,
         evt: MessageEvent,
         sync_room: SyncRoomConfig,
     ) -> UserInfoMap:
