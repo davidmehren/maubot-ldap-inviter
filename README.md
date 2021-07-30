@@ -63,7 +63,8 @@ admin_users:
 ```
 
 ## Usage
-To check the connection to your LDAP server, write `!ldap-check` in a room with the bot.
+To check the connection to your LDAP server, write `!ldap-check <arg>` in a room with the bot.
 It will print out the computed members for all configured rooms.
+If you used the `<1>` placeholder in the config file, you will need to provide a value for `arg`.
 
-To run the actual invite process, write `!ldap-sync` in a room with the bot.
+To run the actual invite process, write `!ldap-sync <arg>` in a room with the bot.
