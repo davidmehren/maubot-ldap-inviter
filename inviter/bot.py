@@ -35,6 +35,7 @@ class LDAPInviterBot(Plugin):
         self, evt: MessageEvent, room: SyncRoomConfig, template_arg1: str
     ):
         """Sync a single Matrix room"""
+        # Generate the final room alias
         alias = template_room_alias(room["alias"], template_arg1)
         await evt.respond(f"Syncing room: {alias}")
         # Ensure room exists
@@ -63,9 +64,11 @@ class LDAPInviterBot(Plugin):
     @command.new(name="ldap-sync")
     @command.argument("arg1", "Argument 1", pass_raw=True, required=False)
     async def ldap_sync(self, evt: MessageEvent, arg1: str) -> None:
+        # Check if the user is allowed to sync
         if evt.sender not in self.config["admin_users"]:
             await evt.respond("You are not allowed to run a sync.")
             return None
+
         await evt.respond(f'Starting sync. Arg1: "{arg1}"')
         try:
             await self.sync_rooms(evt, self.config["sync_rooms"], arg1)
