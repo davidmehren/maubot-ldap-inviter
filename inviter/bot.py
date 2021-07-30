@@ -1,5 +1,6 @@
 import asyncio
 from pprint import pformat
+from traceback import format_exc
 from typing import Type
 
 from maubot import Plugin, MessageEvent
@@ -38,6 +39,7 @@ class LDAPInviterBot(Plugin):
         # Generate the final room alias
         alias = template_room_alias(room["alias"], template_arg1)
         await evt.respond(f"Syncing room: {alias}")
+        self.log.debug(f"Syncing room: {alias}")
         # Ensure room exists
         room_id = await self.matrix_utils.ensure_room_with_alias(alias)
         # Ensure room has the correct name
@@ -53,6 +55,7 @@ class LDAPInviterBot(Plugin):
         # Ensure room is (in) visible in Room Directory
         await self.matrix_utils.ensure_room_visibility(room_id, room["visibility"])
         await evt.respond(f"Successfully synced room.")
+        self.log.debug(f"Successfully synced room.")
 
     async def sync_rooms(
         self, evt: MessageEvent, rooms: [SyncRoomConfig], template_arg1: str
@@ -75,7 +78,8 @@ class LDAPInviterBot(Plugin):
         except Exception as e:
             # Wait a bit to hopefully clear too many requests
             await asyncio.sleep(5)
-            await evt.respond(f"Encountered fatal error: {e}")
+            await evt.respond(f"Encountered fatal error: {e}\n```\n{format_exc()}\n```")
+            raise e
 
     @command.new(name="debug-map")
     async def ldap_check(self, evt: MessageEvent):
@@ -107,5 +111,5 @@ class LDAPInviterBot(Plugin):
                     f'Members of room `{room["alias"]}`:\n```\n{pformat(uids)}\n```'
                 )
         except Exception as e:
-            await evt.respond(f"Encountered fatal error: {e}")
+            await evt.respond(f"Encountered fatal error: {e}\n```\n{format_exc()}\n```")
             raise e
