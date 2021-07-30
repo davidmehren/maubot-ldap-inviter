@@ -1,5 +1,5 @@
 from inviter.config import MemberConfig
-from inviter.matrix_utils import UserInfoMap, UserConfig
+from inviter.matrix_utils import UserInfoMap, UserInfo
 
 
 def template_room_alias(alias: str, arg1: str) -> str:
@@ -15,5 +15,5 @@ def to_user_info_map(member_config: [MemberConfig]) -> UserInfoMap:
     user_info_map = {}
     user: dict
     for user in member_config:
-        user_info_map[user["mxid"]] = UserConfig(power_level=user.get("power_level", 0))
+        user_info_map[user["mxid"]] = UserInfo(power_level=user.get("power_level", 0))
     return user_info_map

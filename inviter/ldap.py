@@ -4,7 +4,7 @@ import ldap
 from maubot import MessageEvent
 
 from .config import LDAPMemberConfig
-from .matrix_utils import UserInfoMap, UserConfig
+from .matrix_utils import UserInfoMap, UserInfo
 
 
 class LDAPManager:
@@ -53,7 +53,7 @@ class LDAPManager:
         # Build UserInfoMap from MXIDs and power level
         user_map = {}
         for mxid in mxids:
-            user_map[mxid] = UserConfig(power_level=power_level)
+            user_map[mxid] = UserInfo(power_level=power_level)
         return user_map
 
     async def get_all_matrix_users_of_sync_room(

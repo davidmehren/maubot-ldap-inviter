@@ -17,11 +17,11 @@ from mautrix.types import (
 from maubot import MessageEvent
 
 
-class UserConfig(TypedDict):
+class UserInfo(TypedDict):
     power_level: Optional[int]
 
 
-UserInfoMap = Mapping[str, UserConfig]
+UserInfoMap = Mapping[str, UserInfo]
 
 
 class MatrixUtils:
