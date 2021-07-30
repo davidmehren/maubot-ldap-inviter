@@ -3,7 +3,7 @@ id: de.herrmehren.ldap-inviter
 version: 0.0.1
 license: MIT
 modules:
-  - ldap-inviter
+  - inviter
 main_class: LDAPInviterBot
 config: true
 extra_files:
