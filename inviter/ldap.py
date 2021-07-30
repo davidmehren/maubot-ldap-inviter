@@ -1,7 +1,6 @@
 from typing import List
 
 import ldap
-from maubot import MessageEvent
 from mautrix.util.logging import TraceLogger
 
 from .config import LDAPMemberConfig

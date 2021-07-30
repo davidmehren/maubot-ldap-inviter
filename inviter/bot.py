@@ -93,7 +93,7 @@ class LDAPInviterBot(Plugin):
             await evt.respond("You are not allowed to run a sync.")
             return None
 
-        await evt.respond(f'Starting sync. Arg1: "{arg1}"')
+        await evt.respond(f'Starting sync.')
         try:
             await self.sync_rooms(evt, self.config["sync_rooms"], arg1)
         except Exception as e:
@@ -127,7 +127,7 @@ class LDAPInviterBot(Plugin):
             room: SyncRoomConfig
             for room in self.config["sync_rooms"]:
                 uids = await ldap_manager.get_all_matrix_users_of_sync_room(
-                    evt, room["ldap_members"]
+                    room["ldap_members"]
                 )
                 await evt.respond(
                     f'Members of room `{room["alias"]}`:\n```\n{pformat(uids)}\n```'
