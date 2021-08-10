@@ -45,10 +45,13 @@ class MatrixUtils:
             )
 
     async def ensure_room_name(self, room_id: RoomID, name: str) -> None:
-        current_name = await self.room_methods.get_state_event(
-            room_id, EventType.ROOM_NAME
-        )
-        if not current_name["name"] == name:
+        try:
+            current_name = (
+                await self.room_methods.get_state_event(room_id, EventType.ROOM_NAME)
+            )["name"]
+        except MNotFound:
+            current_name = ""
+        if not current_name == name:
             self.logger.debug(f"Setting name '{name}' for room {room_id}")
             await self.event_methods.send_state_event(
                 room_id, EventType.ROOM_NAME, RoomNameStateEventContent(name)
